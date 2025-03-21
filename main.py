@@ -2,8 +2,8 @@
 #       Project: AUTOMA(Advanced Utility Task-Optimized Machine Assistant)  #
 #        Author: dreyyan                                                    #
 #      Language: Python                                                     #
-#  Date Started: 03/15/2025                                                 #
-# Date Finished: 03/16/2025                                                 #
+#  Date Started: 03/21/2025                                                 #
+# Date Finished:                                                            #
  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # LIBRARIES: Spacy(NLP), Google API(speech-to-text), Halo(Spinner)
 ''' IMPORTS: LIBRARY '''
