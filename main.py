@@ -15,21 +15,36 @@ from modules.press_enter_to_continue import press_enter_to_continue
 import spacy
 import speech_recognition as sr
 from halo import Halo
+import webbrowser
 
-import time, sys, json
+import time, sys, os, subprocess, json
 
-# UTILITY: Display user's prompt
+# UTILITY: display user's prompt
 def prompt(user_prompt) -> None:
     character_delay_animation(f"[You]: {user_prompt}", 0.03)
 
-# UTILITY: Display bot response
+# UTILITY: display bot response
 def response(bot_response) -> None:
     character_delay_animation(f"[AUTOMA]: {bot_response}", 0.03)
 
-# UTILITY: Load entities.json
+# UTILITY: load entities.json
 def load_entities():
     with open("entities.json", 'r', encoding="utf-8") as file:
         return json.load(file)
+    
+# UTILITY: register browsers for recognition
+def register_browser():
+    chrome_path = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+    webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))   
+
+# UTILITY: open the specified browser
+def open_browser(browser):
+    browser = webbrowser.get(specified_browser)
+    browser.open('https://www.google.com')
+
+# UTILITY: close the specified browser
+def close_browser(browser):
+    subprocess.run(["taskkill", "/im", f"{browser}.exe", "/f"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 ''' MAIN: Voice Recognition '''
 '''
@@ -63,6 +78,7 @@ with sr.Microphone() as source:
 '''
 # DEBUG
 translated_text:str = "Can you open Google Chrome for me?"
+# translated_text:str = "Please close Google Chrome."
 
 ''' MAIN: Natural Language Processing(NLP) '''
 # 5. Display translated text
@@ -74,10 +90,39 @@ nlp = spacy.load("en_core_web_sm")
 # 7. convert translated text into an NLP object
 doc = nlp(translated_text)
 
-# 8. load entities list if an entity is recognized
-if doc.ents:
-    entities = load_entities()
-    print(entities)
+entities = load_entities()
+browsers_dict = entities.get("browsers", {})
+browsers_dict = {browser.lower(): command for browser, command in browsers_dict.items()}
+
+if "open" in doc.text.lower():
+    lowercase_text = doc.text.lower()
+    for browser_friendly_lower, command_name in browsers_dict.items():
+        if browser_friendly_lower in lowercase_text:
+            specified_browser = command_name
+
+            try:
+                register_browser()
+                response(f"I'm opening {specified_browser} for you...")
+                
+                open_browser(specified_browser)
+                break
+
+            except webbrowser.Error:
+                response(f"{browser_friendly_lower} is currently not available.")
+
+if "close" in doc.text.lower():
+    lowercase_text = doc.text.lower()
+    for browser_friendly_lower, command_name in browsers_dict.items():
+        if browser_friendly_lower in lowercase_text:
+            specified_browser = command_name
+
+            try:
+                response(f"Closing {specified_browser}...")
+                close_browser(specified_browser)
+                break
+
+            except webbrowser.Error:
+                response(f"{browser_friendly_lower} is currently not available.")
 
 """ while True:
     print("[ TOKENIZATION ]")

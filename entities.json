@@ -1,12 +1,12 @@
 {
-    "browsers": [
-        "Google Chrome",
-        "Mozilla Firefox",
-        "Safari",
-        "Microsoft Edge",
-        "Opera",
-        "Samsung Internet",
-        "UC Browser",
-        "Tor Browser"
-    ]
+    "browsers": {
+        "Google Chrome": "chrome",
+        "Mozilla Firefox": "firefox",
+        "Safari": "safari",
+        "Microsoft Edge": "edge",
+        "Opera": "opera",
+        "Samsung Internet": "samsung-internet",
+        "UC Browser": "ucbrowser",
+        "Tor Browser": "torbrowser"
+    }
 }
