@@ -8,5 +8,16 @@
         "Samsung Internet": "samsung-internet",
         "UC Browser": "ucbrowser",
         "Tor Browser": "torbrowser"
+    },
+    
+    "applications": {
+        "Calculator": "calc.exe",
+        "Notepad": "notepad.exe",
+        "Clock": "timers.exe",
+        "Camera": "microsoft.windows.camera:",
+        "Command Prompt": "cmd.exe",
+        "File Explorer": "explorer.exe",
+        "Settings": "ms-settings:",
+        "Task Manager": "taskmgr.exe"
     }
 }
