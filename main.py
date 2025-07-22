@@ -1,36 +1,38 @@
- # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#       Project: AUTOMA(Advanced Utility Task-Optimized Machine Assistant)  #
-#        Author: dreyyan                                                    #
-#      Language: Python                                                     #
-#  Date Started: 03/21/2025                                                 #
-# Date Finished:                                                            #
- # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# LIBRARIES: Spacy(NLP), Google API(speech-to-text), Halo(Spinner)
-''' IMPORTS: LIBRARY '''
+''' MODULES '''
+from modules.character_delay_animation import character_delay_animation
+from modules.clear_screen import clear_screen
+from modules.delay import delay
+from modules.display_format import display_format
+from modules.display_function import display_function
+from modules.display_header import display_header
+from modules.display_line import display_line
+from modules.error_message import error_message
+from modules.insert_spaces import insert_spaces
+from modules.line_delay_animation import line_delay_animation
+from modules.press_enter_to_continue import press_enter_to_continue
+
+''' IMPORTS '''
 import spacy
 import speech_recognition as sr
 from halo import Halo
 
-''' IMPORTS: STANDARD '''
-import time, sys
-
-''' FUNCTIONS: UTILITY '''
-# UTILITY: Display text with a typing effect
-def character_delay_animation(string_input, seconds):
-    for char in string_input:
-        print(char, end="", flush=True)
-        time.sleep(seconds)
-    print()
+import time, sys, json
 
 # UTILITY: Display user's prompt
-def prompt(user_prompt):
+def prompt(user_prompt) -> None:
     character_delay_animation(f"[You]: {user_prompt}", 0.03)
 
 # UTILITY: Display bot response
-def response(bot_response):
+def response(bot_response) -> None:
     character_delay_animation(f"[AUTOMA]: {bot_response}", 0.03)
 
-''' FUNCTIONS: SPEECH RECOGNITION '''
+# UTILITY: Load entities.json
+def load_entities():
+    with open("entities.json", 'r', encoding="utf-8") as file:
+        return json.load(file)
+
+''' MAIN: Voice Recognition '''
+'''
 # 1. Create an instance of 'Recognizer'
 recognizer = sr.Recognizer()
 
@@ -47,11 +49,9 @@ with sr.Microphone() as source:
         spinner.start() # Start spinner
 
         # 4. Convert speech ~> text
-        translated_text = recognizer.recognize_google(user_audio_prompt)
+        translated_text = recognizer.recognize_google(user_audio_prompt) # type: ignore
 
-        # 5. Display translated text
         spinner.stop()
-        prompt(translated_text)
 
     # ERROR: Speech not recognized
     except sr.UnknownValueError:
@@ -60,6 +60,63 @@ with sr.Microphone() as source:
     # ERROR: Google API failed
     except sr.RequestError:
         response("Server is busy, please try again later...")
+'''
+# DEBUG
+translated_text:str = "Can you open Google Chrome for me?"
 
-# nlp = spacy.load("en_core_web_sm") # Load spacy NLP english model
-# doc = nlp() # Process with NLP
+''' MAIN: Natural Language Processing(NLP) '''
+# 5. Display translated text
+prompt(translated_text)
+
+# 6. Load spacy NLP english model
+nlp = spacy.load("en_core_web_sm") 
+
+# 7. convert translated text into an NLP object
+doc = nlp(translated_text)
+
+# 8. load entities list if an entity is recognized
+if doc.ents:
+    entities = load_entities()
+    print(entities)
+
+""" while True:
+    print("[ TOKENIZATION ]")
+    display_format('#', 16)
+
+    # 1. Tokenization [ Splitting Text ]
+    for token in doc:
+        print(f'{token.text}')
+
+    print()
+    print("[ NAMED ENTITY RECOGNITION ]")
+    display_format('#', 28)
+
+    # 2. NER [ Named Entity Recognition ]
+    for token in doc.ents:
+        print(f'{token.text} >> {token.label_}')
+
+    print()
+    print("[ PART-OF-SPEECH ]")
+    display_format('#', 18)
+
+    # 3. POS [ Part-of-speech ]
+    for token in doc:
+        print(f'{token.text} >> {token.pos_}')
+
+    print()
+    print("[ LEMMATIZATION ]")
+    display_format('#', 17)
+
+    # 4. Lemmatization [ Extracting base form of words ]
+    for token in doc:
+        print(f'{token.text} >> {token.lemma_}')
+
+    print()
+    print("[ DEPENDENCY PARSING ]")
+    display_format('#', 22)
+
+    # 5. Dependency Parsing [ Finding relationships ]
+    for token in doc:
+        print(f'{token.text} >> {token.dep_} >> {token.head.text}')
+    break
+ """
