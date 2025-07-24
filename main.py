@@ -70,28 +70,25 @@ def listen_for_response():
     with sr.Microphone() as source:
         recognizer.adjust_for_ambient_noise(source, duration=1) # Noise reduction
 
-        # prompt user to speak with AUTOMA
-        response("What would you like to do?")
-        user_audio_prompt = recognizer.listen(source) # Record audio from 'Microphone'
+        while True:
+            # prompt user to speak with AUTOMA
+            user_audio_prompt = recognizer.listen(source) # Record audio from 'Microphone'
 
-        try:
-            spinner = Halo(spinner='dots') # Insert spinner
-            spinner.start() # Start spinner
+            try:
+                # convert speech ~> text
+                translated_text = recognizer.recognize_google(user_audio_prompt) # type: ignore
 
-            # convert speech ~> text
-            translated_text = recognizer.recognize_google(user_audio_prompt) # type: ignore
+                return translated_text
 
-            spinner.stop()
+            # ERROR: Speech not recognized
+            except sr.UnknownValueError:
+                response("Sorry, I could not hear you well.")
+                continue
 
-        # ERROR: Speech not recognized
-        except sr.UnknownValueError:
-            response("Sorry, I could not understand the audio.")
-
-        # ERROR: Google API failed
-        except sr.RequestError:
-            response("Server is busy, please try again later...")
-
-    return translated_text
+            # ERROR: Google API failed
+            except sr.RequestError:
+                response("The servers are busy, please try again later...")
+                return None
 
 # PROCESS: Use NLP English Model to Create 'doc' Object
 def process_prompt(user_prompt):
@@ -137,7 +134,7 @@ def get_specified_app(lowercase_text, apps_dict):
 def open_browser(specified_browser):
     try:
         register_browser()
-        response(f"I just opened {specified_browser} for you...")
+        response(f"Opening {specified_browser}...")
         
         browser = webbrowser.get(specified_browser)
         browser.open('https://www.google.com')
@@ -148,7 +145,10 @@ def open_browser(specified_browser):
 # PROCESS: Close the Specified Browser
 def close_browser(specified_browser):
     try:
-        response(f"Closing {specified_browser}...")
+        if specified_browser == (None, None):
+            response(f"Closing...")
+        else: 
+            response(f"Closing {specified_browser}...")
         subprocess.run(["taskkill", "/im", f"{specified_browser}.exe", "/f"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     except webbrowser.Error:
@@ -161,22 +161,28 @@ def open_app(app_command, app_name):
             os.system(f"start {app_command}")
         else:
             subprocess.Popen(f"{app_command}", creationflags=subprocess.CREATE_NEW_CONSOLE)
-        response(f"I just opened {app_name} for you...")
+        response(f"Opening {app_name}...")
 
     except Exception as e:
-        response(f"I apologize, but it seems that I am unable to open {app_name}...")
+        if app_name == None:
+            response("I apologize, but it seems that I am unable to open the said app...")
+        else:
+            response(f"I apologize, but it seems that I am unable to open {app_name}...")
 
 # PROCESS: Close the Specified Application
 def close_app(app_command):
     try:
         if not app_command.endswith(".exe"):
             app_command += ".exe"
-            
-        response(f"Closing {app_command}...")
+
+            response(f"Closing {app_command}...")
         subprocess.run(["taskkill", "/im", app_command, "/f"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     except Exception as e:
-        response(f"I apologize, but it seems that I am unable to close {app_command}...")
+        if app_command == None:
+            response("I apologize, but it seems that I am unable to open the said app...")
+        else:
+            response(f"I apologize, but it seems that I am unable to close {app_command[0]}...")
 
 # PROCESS: Load Browser Names
 def load_browser_entities(entities):
@@ -215,7 +221,7 @@ def handle_close(lowercase_text):
     browsers_dict = load_browser_entities(entities)
     apps_dict = load_app_entities(entities)
 
-    specified_browser = get_specified_browser(lowercase_text, browsers_dict)
+    specified_browser, search_query = get_specified_browser(lowercase_text, browsers_dict)
     specified_app = get_specified_app(lowercase_text, apps_dict)
 
     if specified_browser:
@@ -235,12 +241,12 @@ def shutdown_AUTOMA():
 # MAIN: Start Chatbot Conversation
 def initiate_AUTOMA():
     clear_screen()
-
     # 1. Setup Background Music
     pygame.mixer.init()
     pygame.mixer.music.load("assets/background_SFX.mp3")
     pygame.mixer.music.set_volume(0.1)
     pygame.mixer.music.play()
+
 
     # 2. Display TUI Header
     display_header()
@@ -248,29 +254,37 @@ def initiate_AUTOMA():
     # 3. Welcome User
     greet()
 
-    # 4. Prompt User Response via Voice Recognition
-    # user_response = listen_for_response()
-    
-    # user_response = "Can you open Google Chrome for me?"
-    # user_response = "Please close Google Chrome."
-    user_response = "Can you close notepad?"
-    # user_response = "Can you search for the best headset in the world?"
-    # user_response = "Goodbye AUTOMA"
+    while True:
+        # 4. Prompt User Response via Voice Recognition
+        user_response = listen_for_response()
 
-    # 5. Process User Response as Prompt
-    doc = process_prompt(user_response)
+        # 5. Process User Response as Prompt
+        doc = process_prompt(user_response)
 
-    # 6. Convert to Lowercase
-    lowercase_text = doc.text.lower()
-    
-    # 7. Initiate Task based on Prompt
-    if "open" in lowercase_text or "search" in lowercase_text:
-        handle_open(lowercase_text)
-    elif "close" in lowercase_text:
-        handle_close(lowercase_text)
-    elif "bye" in lowercase_text:
-        shutdown_AUTOMA()
+        # 6. Convert to Lowercase
+        lowercase_text = doc.text.lower()
+        
+        # 7. Initiate Task based on Prompt
+        if "open" in lowercase_text or "search" in lowercase_text:
+            handle_open(lowercase_text)
+        elif "close" in lowercase_text:
+            handle_close(lowercase_text)
+        elif "bye" in lowercase_text:
+            shutdown_AUTOMA()
+    '''
+    UNOPENABLE
+    - Microsoft Edge
+    - Clock
 
+    UNCLOSABLE
+    - Settings
+    - Notepad
+    - Task Manager
+    - Camera
+    - Command Prompt
+    - Calculator
+    - File Explorer
+    '''
 initiate_AUTOMA()
 
 """ while True:
