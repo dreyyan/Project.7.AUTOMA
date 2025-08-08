@@ -2,16 +2,21 @@
 from modules.character_delay_animation import character_delay_animation
 from modules.clear_screen import clear_screen
 from modules.delay import delay
+from modules.error_message import error_message
 
 ''' IMPORTS '''
 import spacy
 import speech_recognition as sr
-from halo import Halo
 import webbrowser
 import pygame
+import threading, queue
 
 import time, json
 import sys, os, subprocess
+
+text_queue = queue.Queue()
+audio_queue = queue.Queue()
+
 
 ''' UTILITIES '''
 # UTILITY: Load 'entities.json'
@@ -61,7 +66,16 @@ def simplify_search_query(text):
 def greet():
     response("Hi, I'm A.U.T.O.M.A. Ask me anything!")
 
-# PROCESS: Get User Prompt via Voice Recognition
+# PROCESS: Listen for User Text Input
+def wait_text_input():
+    character_delay_animation("[You]: ", 0.03, 0)
+    while True:
+        user_input = input().strip()
+        text_queue.put(user_input)
+        if user_input.lower() == 'exit':
+            break
+
+# PROCESS: Listen for User Prompt via Voice Recognition
 def listen_for_response():
     # create an instance of 'Recognizer'
     recognizer = sr.Recognizer()
@@ -71,24 +85,26 @@ def listen_for_response():
         recognizer.adjust_for_ambient_noise(source, duration=1) # Noise reduction
 
         while True:
-            # prompt user to speak with AUTOMA
-            user_audio_prompt = recognizer.listen(source) # Record audio from 'Microphone'
-
             try:
+                # prompt user to speak with AUTOMA
+                user_audio_prompt = recognizer.listen(source) # Record audio from 'Microphone'
+
                 # convert speech ~> text
                 translated_text = recognizer.recognize_google(user_audio_prompt) # type: ignore
 
-                return translated_text
+                audio_queue.put(translated_text)
 
+                if translated_text.lower() == 'exit':
+                    break
+            except sr.WaitTimeoutError:
+                continue
             # ERROR: Speech not recognized
             except sr.UnknownValueError:
-                response("Sorry, I could not hear you well.")
                 continue
-
             # ERROR: Google API failed
             except sr.RequestError:
-                response("The servers are busy, please try again later...")
-                return None
+                error_message("API request failed", 0.2)
+                break
 
 # PROCESS: Use NLP English Model to Create 'doc' Object
 def process_prompt(user_prompt):
@@ -97,11 +113,9 @@ def process_prompt(user_prompt):
     pygame.mixer.music.set_volume(0.1)
 
     nlp = spacy.load("en_core_web_sm") # load spacy NLP english model
-    character_delay_animation(f"   [You]: ", 0.03, 0)
     delay(1)
 
     pygame.mixer.music.play()
-    character_delay_animation(f"{user_prompt}", 0.03, 1)
     pygame.mixer.music.fadeout(500)
 
     doc = nlp(user_prompt)
@@ -254,23 +268,43 @@ def initiate_AUTOMA():
     # 3. Welcome User
     greet()
 
+    # 4. Prompt User Response via Voice Recognition / Text Input
+    audio_thread = threading.Thread(target=listen_for_response, daemon=True)
+    audio_thread.start()
+
+    text_thread = threading.Thread(target=wait_text_input, daemon=True)
+    text_thread.start()
+
     while True:
-        # 4. Prompt User Response via Voice Recognition
-        user_response = listen_for_response()
-
         # 5. Process User Response as Prompt
-        doc = process_prompt(user_response)
+        if not text_queue.empty():
+            txt = text_queue.get()
+            doc = process_prompt(txt)
+            lowercase_text = doc.text.lower()
 
-        # 6. Convert to Lowercase
-        lowercase_text = doc.text.lower()
+            # 6. Initiate Task based on Prompt
+            if "open" in lowercase_text or "search" in lowercase_text:
+                handle_open(lowercase_text)
+            elif "close" in lowercase_text:
+                handle_close(lowercase_text)
+            elif "bye" in lowercase_text:
+                shutdown_AUTOMA()
+
+        if not audio_queue.empty():
+            audio_txt = audio_queue.get()
+            doc = process_prompt(audio_txt)
+            audio_txt_lower = audio_txt.lower()
+
+            if "open" in audio_txt_lower or "search" in audio_txt_lower:
+                handle_open(audio_txt_lower)
+            elif "close" in audio_txt_lower:
+                handle_close(audio_txt_lower)
+            elif "bye" in audio_txt_lower:
+                shutdown_AUTOMA()
+                break
+
+        delay(0.1)
         
-        # 7. Initiate Task based on Prompt
-        if "open" in lowercase_text or "search" in lowercase_text:
-            handle_open(lowercase_text)
-        elif "close" in lowercase_text:
-            handle_close(lowercase_text)
-        elif "bye" in lowercase_text:
-            shutdown_AUTOMA()
     '''
     UNOPENABLE
     - Microsoft Edge
@@ -285,6 +319,29 @@ def initiate_AUTOMA():
     - Calculator
     - File Explorer
     '''
+
+"""     "browsers": {
+        "Google Chrome": "chrome",
+        "Mozilla Firefox": "firefox",
+        "Safari": "safari",
+        "Microsoft Edge": "edge",
+        "Opera": "opera",
+        "Samsung Internet": "samsung-internet",
+        "UC Browser": "ucbrowser",
+        "Tor Browser": "torbrowser"
+    },
+    
+    "applications": {
+        "Calculator": "calc.exe",
+        "Notepad": "notepad.exe",
+        "Clock": "timers.exe",
+        "Camera": "microsoft.windows.camera:",
+        "Command Prompt": "cmd.exe",
+        "File Explorer": "explorer.exe",
+        "Settings": "ms-settings:",
+        "Task Manager": "taskmgr.exe"
+    } """
+
 initiate_AUTOMA()
 
 """ while True:
