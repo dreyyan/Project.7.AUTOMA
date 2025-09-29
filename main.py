@@ -17,7 +17,6 @@ import sys, os, subprocess
 text_queue = queue.Queue()
 audio_queue = queue.Queue()
 
-
 ''' UTILITIES '''
 # UTILITY: Load 'entities.json'
 def load_entities():
@@ -27,16 +26,16 @@ def load_entities():
 # UTILITY: Display Bot's Response
 def response(bot_response) -> None:
     pygame.mixer.init()
-    pygame.mixer.music.load("assets/type_SFX.mp3")
-    pygame.mixer.music.set_volume(0.1)
+    type_sfx = pygame.mixer.Sound("assets/type_SFX.mp3")
+    type_sfx.set_volume(5)
 
     character_delay_animation(f"[AUTOMA]: ", 0.03, 0)
     delay(1)
 
-    pygame.mixer.music.play()
+    type_sfx.play()
     character_delay_animation(f"{bot_response}", 0.03, 1)
 
-    pygame.mixer.music.fadeout(500)
+    type_sfx.fadeout(500)
     
 # UTILITY: Display Header
 def display_header():
@@ -68,7 +67,6 @@ def greet():
 
 # PROCESS: Listen for User Text Input
 def wait_text_input():
-    character_delay_animation("[You]: ", 0.03, 0)
     while True:
         user_input = input().strip()
         text_queue.put(user_input)
@@ -106,11 +104,13 @@ def listen_for_response():
                 error_message("API request failed", 0.2)
                 break
 
+        character_delay_animation(translated_text, 0.03)
+
 # PROCESS: Use NLP English Model to Create 'doc' Object
 def process_prompt(user_prompt):
     pygame.mixer.init()
     pygame.mixer.music.load("assets/type_SFX.mp3")
-    pygame.mixer.music.set_volume(0.1)
+    pygame.mixer.music.set_volume(60)
 
     nlp = spacy.load("en_core_web_sm") # load spacy NLP english model
     delay(1)
@@ -258,9 +258,8 @@ def initiate_AUTOMA():
     # 1. Setup Background Music
     pygame.mixer.init()
     pygame.mixer.music.load("assets/background_SFX.mp3")
-    pygame.mixer.music.set_volume(0.1)
+    pygame.mixer.music.set_volume(.2)
     pygame.mixer.music.play()
-
 
     # 2. Display TUI Header
     display_header()
@@ -275,6 +274,7 @@ def initiate_AUTOMA():
     text_thread = threading.Thread(target=wait_text_input, daemon=True)
     text_thread.start()
 
+    character_delay_animation("   [You]: ", 0.03, 0)
     while True:
         # 5. Process User Response as Prompt
         if not text_queue.empty():
@@ -283,28 +283,33 @@ def initiate_AUTOMA():
             lowercase_text = doc.text.lower()
 
             # 6. Initiate Task based on Prompt
+            # DEBUG: Fix threading & remove redundant output
             if "open" in lowercase_text or "search" in lowercase_text:
                 handle_open(lowercase_text)
+                character_delay_animation("   [You]: ", 0.03, 0)
             elif "close" in lowercase_text:
                 handle_close(lowercase_text)
-            elif "bye" in lowercase_text:
+                character_delay_animation("   [You]: ", 0.03, 0)
+            elif "exit" in lowercase_text or "bye" in lowercase_text:
                 shutdown_AUTOMA()
 
         if not audio_queue.empty():
             audio_txt = audio_queue.get()
             doc = process_prompt(audio_txt)
             audio_txt_lower = audio_txt.lower()
+            character_delay_animation(audio_txt, 0.03, 1)
 
             if "open" in audio_txt_lower or "search" in audio_txt_lower:
                 handle_open(audio_txt_lower)
+                character_delay_animation("   [You]: ", 0.03, 0)
             elif "close" in audio_txt_lower:
                 handle_close(audio_txt_lower)
-            elif "bye" in audio_txt_lower:
+                character_delay_animation("   [You]: ", 0.03, 0)
+            elif "exit" in audio_txt_lower or "bye" in audio_txt_lower:
                 shutdown_AUTOMA()
                 break
 
         delay(0.1)
-        
     '''
     UNOPENABLE
     - Microsoft Edge
